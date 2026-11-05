@@ -1,0 +1,30 @@
+version: '3.9'
+
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: grant-finder-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - grant_db:/app/data
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=sqlite:////app/data/grant_finder.db
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: grant-finder-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+volumes:
+  grant_db:

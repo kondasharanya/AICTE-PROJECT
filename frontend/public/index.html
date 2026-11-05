@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AICTE AI Grant & Funding Finder</title>
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --blue: #0f62fe;
+      --blue-dark: #0043ce;
+      --teal: #009d9a;
+      --purple: #8a3ffc;
+      --green: #24a148;
+      --orange: #ff832b;
+      --red: #da1e28;
+      --bg: #f4f4f4;
+      --surface: #ffffff;
+      --border: #e0e0e0;
+      --text: #161616;
+      --muted: #6f6f6f;
+      --sidebar-w: 240px;
+    }
+    body { font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── Top Nav ──────────────────────────────────────────────── */
+    .topnav {
+      height: 48px; background: #161616; color: #fff;
+      display: flex; align-items: center; padding: 0 1rem; gap: 1rem;
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    }
+    .topnav .logo { font-weight: 700; font-size: 0.95rem; letter-spacing: 0.3px; color: #fff; }
+    .topnav .logo span { color: var(--blue); }
+    .topnav .ibm-badge {
+      margin-left: auto; background: var(--blue); color: #fff;
+      font-size: 0.72rem; padding: 2px 8px; border-radius: 2px; font-weight: 600;
+    }
+
+    /* ── Layout ───────────────────────────────────────────────── */
+    .layout { display: flex; margin-top: 48px; min-height: calc(100vh - 48px); }
+
+    .sidebar {
+      width: var(--sidebar-w); background: #262626; color: #c6c6c6;
+      flex-shrink: 0; padding: 1.5rem 0; position: fixed; top: 48px; bottom: 0; overflow-y: auto;
+    }
+    .sidebar-section { font-size: 0.7rem; font-weight: 600; color: #8d8d8d;
+      text-transform: uppercase; letter-spacing: 1px; padding: 0.75rem 1rem 0.25rem; }
+    .nav-item {
+      display: flex; align-items: center; gap: 0.6rem;
+      padding: 0.55rem 1rem; cursor: pointer; font-size: 0.875rem;
+      border-left: 3px solid transparent; transition: background 0.15s;
+    }
+    .nav-item:hover { background: #393939; }
+    .nav-item.active { background: #393939; border-left-color: var(--blue); color: #fff; }
+    .nav-icon { width: 16px; text-align: center; }
+
+    .content { margin-left: var(--sidebar-w); flex: 1; padding: 2rem; }
+
+    /* ── Page sections ────────────────────────────────────────── */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ── Cards ────────────────────────────────────────────────── */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 1.5rem; }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+
+    /* ── Stats Row ────────────────────────────────────────────── */
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); padding: 1.25rem; border-radius: 4px; }
+    .stat-value { font-size: 2rem; font-weight: 700; color: var(--blue); line-height: 1; }
+    .stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 0.4rem; }
+
+    /* ── Page header ──────────────────────────────────────────── */
+    .page-header { margin-bottom: 1.5rem; }
+    .page-header h1 { font-size: 1.5rem; font-weight: 600; }
+    .page-header p { color: var(--muted); font-size: 0.9rem; margin-top: 0.25rem; }
+
+    /* ── Grant card ───────────────────────────────────────────── */
+    .grant-card { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.6rem; }
+    .grant-card:hover { border-color: var(--blue); }
+    .grant-title { font-weight: 600; font-size: 0.95rem; color: var(--text); }
+    .grant-provider { font-size: 0.8rem; color: var(--muted); }
+    .grant-meta { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .tag {
+      display: inline-block; padding: 2px 8px; border-radius: 2px;
+      font-size: 0.72rem; font-weight: 500;
+    }
+    .tag-blue { background: #d0e2ff; color: #0043ce; }
+    .tag-green { background: #defbe6; color: #198038; }
+    .tag-orange { background: #ffd6a5; color: #8a3800; }
+    .tag-purple { background: #e8daff; color: #6929c4; }
+    .tag-teal { background: #d9fbfb; color: #005d5d; }
+    .tag-red { background: #fff1f1; color: #a2191f; }
+
+    .match-bar-wrap { display: flex; align-items: center; gap: 0.5rem; }
+    .match-bar { flex: 1; height: 6px; background: #e0e0e0; border-radius: 3px; overflow: hidden; }
+    .match-bar-fill { height: 100%; border-radius: 3px; background: var(--green); }
+    .match-score { font-size: 0.8rem; font-weight: 600; color: var(--green); min-width: 36px; text-align: right; }
+
+    .grant-funding { font-size: 0.85rem; color: var(--text); font-weight: 500; }
+    .grant-deadline { font-size: 0.78rem; color: var(--muted); }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.5rem 1rem; border-radius: 3px; font-size: 0.875rem;
+      font-weight: 500; cursor: pointer; border: none; text-decoration: none;
+      transition: background 0.15s;
+    }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-primary:hover { background: var(--blue-dark); }
+    .btn-secondary { background: transparent; color: var(--blue); border: 1px solid var(--blue); }
+    .btn-secondary:hover { background: #e8f0fe; }
+    .btn-sm { padding: 0.3rem 0.75rem; font-size: 0.8rem; }
+
+    .grant-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+
+    /* ── Forms ────────────────────────────────────────────────── */
+    .form-group { margin-bottom: 1.25rem; }
+    .form-group label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.4rem; }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border);
+      border-radius: 3px; font-size: 0.875rem; background: var(--surface); color: var(--text);
+      outline: none; transition: border-color 0.15s;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus { border-color: var(--blue); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+    /* ── Search bar ───────────────────────────────────────────── */
+    .search-bar { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+    .search-bar input { flex: 1; padding: 0.6rem 0.75rem; border: 1px solid var(--border); border-radius: 3px; font-size: 0.875rem; outline: none; }
+    .search-bar input:focus { border-color: var(--blue); }
+
+    /* ── Filter bar ───────────────────────────────────────────── */
+    .filter-bar { display: flex; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .filter-bar select { padding: 0.45rem 0.75rem; border: 1px solid var(--border); border-radius: 3px; font-size: 0.8rem; background: var(--surface); }
+
+    /* ── Proposal section ─────────────────────────────────────── */
+    .proposal-box { background: #f0f4ff; border: 1px solid #b3c7f7; border-radius: 4px; padding: 1.5rem; white-space: pre-wrap; font-size: 0.875rem; line-height: 1.7; max-height: 600px; overflow-y: auto; }
+    .ai-badge { display: inline-flex; align-items: center; gap: 0.3rem; background: #e8daff; color: #6929c4; font-size: 0.75rem; padding: 2px 8px; border-radius: 2px; font-weight: 600; margin-bottom: 0.75rem; }
+
+    /* ── Spinner ──────────────────────────────────────────────── */
+    .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid #ccc; border-top-color: var(--blue); border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ────────────────────────────────────────────────── */
+    #toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: #262626; color: #fff; padding: 0.75rem 1.25rem; border-radius: 4px; font-size: 0.875rem; opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 999; }
+    #toast.show { opacity: 1; }
+
+    /* ── Section divider ──────────────────────────────────────── */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+
+    /* ── IBM branding section ─────────────────────────────────── */
+    .ibm-section { background: #e8f0fe; border: 1px solid #b3c7f7; border-radius: 4px; padding: 1rem 1.25rem; display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+    .ibm-section .ibm-logo { font-weight: 900; font-size: 1.3rem; color: #0f62fe; letter-spacing: -1px; }
+    .ibm-section p { font-size: 0.82rem; color: #0043ce; }
+  </style>
+</head>
+<body>
+
+<!-- ── Top Navigation ──────────────────────────────────────────────────────── -->
+<nav class="topnav">
+  <div class="logo">AICTE &nbsp;<span>AI Grant Finder</span></div>
+  <div style="color:#8d8d8d;font-size:0.8rem;">Powered by IBM Granite · watsonx.ai</div>
+  <div class="ibm-badge">IBM Cloud</div>
+</nav>
+
+<!-- ── Layout ──────────────────────────────────────────────────────────────── -->
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-section">Main</div>
+    <div class="nav-item active" onclick="showPage('dashboard', this)">
+      <span class="nav-icon">⚡</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="showPage('grants', this)">
+      <span class="nav-icon">🔍</span> Discover Grants
+    </div>
+    <div class="nav-item" onclick="showPage('match', this)">
+      <span class="nav-icon">🎯</span> AI Matching
+    </div>
+    <div class="nav-item" onclick="showPage('proposal', this)">
+      <span class="nav-icon">📝</span> Generate Proposal
+    </div>
+    <div class="sidebar-section" style="margin-top:1rem;">Profile</div>
+    <div class="nav-item" onclick="showPage('profile', this)">
+      <span class="nav-icon">🏢</span> Startup Profile
+    </div>
+    <div class="nav-item" onclick="showPage('applications', this)">
+      <span class="nav-icon">📋</span> My Applications
+    </div>
+    <div class="sidebar-section" style="margin-top:1rem;">System</div>
+    <div class="nav-item" onclick="showPage('api', this)">
+      <span class="nav-icon">🔌</span> API Docs
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="content">
+
+    <!-- ── DASHBOARD ──────────────────────────────────────────────────────── -->
+    <div id="page-dashboard" class="page active">
+      <div class="page-header">
+        <h1>Grant Dashboard</h1>
+        <p>AI-powered grant discovery and matching for Indian startups using IBM Granite</p>
+      </div>
+
+      <div class="ibm-section">
+        <div class="ibm-logo">IBM</div>
+        <div>
+          <strong style="font-size:0.9rem;color:#0043ce;">Powered by IBM watsonx.ai · Granite Model</strong>
+          <p>Uses <code>ibm/granite-13b-chat-v2</code> for NLP extraction, match scoring, and proposal generation via IBM Cloud Lite services.</p>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-grants">8</div>
+          <div class="stat-label">Active Grants Available</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color:var(--green);" id="stat-matched">—</div>
+          <div class="stat-label">Grants Matched for You</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color:var(--purple);" id="stat-proposals">0</div>
+          <div class="stat-label">Proposals Generated</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color:var(--orange);">₹2.5L–1Cr</div>
+          <div class="stat-label">Funding Range (INR)</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom:1rem;font-size:1rem;">🚀 Quick Start</h3>
+        <ol style="padding-left:1.25rem;line-height:2.2;color:var(--muted);font-size:0.9rem;">
+          <li><strong style="color:var(--text);">Create Startup Profile</strong> – Enter your startup details (domain, stage, location)</li>
+          <li><strong style="color:var(--text);">Discover Grants</strong> – Browse 8+ active government and institutional grants</li>
+          <li><strong style="color:var(--text);">AI Matching</strong> – IBM Granite scores and ranks grants based on your profile</li>
+          <li><strong style="color:var(--text);">Generate Proposal</strong> – One-click AI-drafted application proposal</li>
+        </ol>
+        <div style="margin-top:1.25rem;display:flex;gap:0.75rem;">
+          <button class="btn btn-primary" onclick="showPage('profile', document.querySelector('.nav-item:nth-child(6)'))">Create Profile</button>
+          <button class="btn btn-secondary" onclick="showPage('grants', document.querySelectorAll('.nav-item')[1])">Browse Grants</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DISCOVER GRANTS ────────────────────────────────────────────────── -->
+    <div id="page-grants" class="page">
+      <div class="page-header">
+        <h1>Discover Grants</h1>
+        <p>Browse active government and institutional funding opportunities</p>
+      </div>
+
+      <div class="search-bar">
+        <input type="text" id="grant-search" placeholder="Search grants by title, provider, domain..." oninput="filterGrants()" />
+        <button class="btn btn-primary" onclick="loadGrants()">🔄 Refresh</button>
+      </div>
+
+      <div class="filter-bar">
+        <select id="filter-domain" onchange="filterGrants()">
+          <option value="">All Domains</option>
+          <option>EdTech</option><option>HealthTech</option><option>FinTech</option>
+          <option>AgriTech</option><option>CleanTech</option><option>AI/ML</option>
+          <option>Biotech</option><option>DeepTech</option><option>IoT</option>
+        </select>
+        <select id="filter-stage" onchange="filterGrants()">
+          <option value="">All Stages</option>
+          <option value="idea">Idea</option><option value="prototype">Prototype</option>
+          <option value="mvp">MVP</option><option value="early_stage">Early Stage</option>
+          <option value="growth">Growth</option>
+        </select>
+        <select id="filter-location" onchange="filterGrants()">
+          <option value="">All Locations</option>
+          <option>India</option><option>Karnataka</option><option>USA</option>
+        </select>
+      </div>
+
+      <div id="grants-list" class="card-grid">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- ── AI MATCHING ────────────────────────────────────────────────────── -->
+    <div id="page-match" class="page">
+      <div class="page-header">
+        <h1>AI Grant Matching</h1>
+        <p>IBM Granite analyzes your startup profile and ranks the best-fit grants</p>
+      </div>
+
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="ai-badge">🤖 IBM Granite · watsonx.ai</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Select Startup Profile</label>
+            <select id="match-startup-id">
+              <option value="">— Select your startup —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Top K Results</label>
+            <select id="match-top-k">
+              <option value="5">Top 5</option>
+              <option value="10" selected>Top 10</option>
+              <option value="20">Top 20</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="runMatching()">
+          🎯 Run AI Matching
+        </button>
+        <span id="match-spinner" style="display:none;margin-left:1rem;"><span class="spinner"></span> Analyzing with IBM Granite...</span>
+      </div>
+
+      <div id="match-results"></div>
+    </div>
+
+    <!-- ── GENERATE PROPOSAL ──────────────────────────────────────────────── -->
+    <div id="page-proposal" class="page">
+      <div class="page-header">
+        <h1>Generate Grant Proposal</h1>
+        <p>IBM Granite writes a tailored proposal draft for your selected grant</p>
+      </div>
+
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="ai-badge">✍️ IBM Granite · Proposal Generator</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Startup Profile</label>
+            <select id="proposal-startup-id">
+              <option value="">— Select startup —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Grant</label>
+            <select id="proposal-grant-id">
+              <option value="">— Select grant —</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Additional Context (optional)</label>
+          <textarea id="proposal-context" rows="3" placeholder="Any specific achievements, pilot data, partnerships to highlight..."></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="generateProposal()">
+          📝 Generate Proposal with IBM Granite
+        </button>
+        <span id="proposal-spinner" style="display:none;margin-left:1rem;"><span class="spinner"></span> Generating with IBM Granite...</span>
+      </div>
+
+      <div id="proposal-output" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+          <h3 style="font-size:1rem;">Generated Proposal Draft</h3>
+          <button class="btn btn-secondary btn-sm" onclick="copyProposal()">📋 Copy</button>
+        </div>
+        <div class="proposal-box" id="proposal-text"></div>
+      </div>
+    </div>
+
+    <!-- ── STARTUP PROFILE ────────────────────────────────────────────────── -->
+    <div id="page-profile" class="page">
+      <div class="page-header">
+        <h1>Startup Profile</h1>
+        <p>Register your startup to enable personalized grant matching</p>
+      </div>
+
+      <div class="card" style="max-width:640px;">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Startup Name *</label>
+            <input type="text" id="p-name" placeholder="e.g. TechBridge AI" />
+          </div>
+          <div class="form-group">
+            <label>Domain / Industry *</label>
+            <select id="p-domain">
+              <option value="">Select domain</option>
+              <option>EdTech</option><option>HealthTech</option><option>FinTech</option>
+              <option>AgriTech</option><option>CleanTech</option><option>AI/ML</option>
+              <option>Biotech</option><option>DeepTech</option><option>IoT</option>
+              <option>SaaS</option><option>Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Startup Stage *</label>
+            <select id="p-stage">
+              <option value="idea">💡 Idea</option>
+              <option value="prototype">🔧 Prototype</option>
+              <option value="mvp" selected>🚀 MVP</option>
+              <option value="early_stage">📈 Early Stage</option>
+              <option value="growth">📊 Growth</option>
+              <option value="scale">🌐 Scale</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>State / Province</label>
+            <input type="text" id="p-state" placeholder="e.g. Karnataka" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Founding Year</label>
+            <input type="number" id="p-year" placeholder="e.g. 2022" min="2000" max="2026" />
+          </div>
+          <div class="form-group">
+            <label>Team Size</label>
+            <input type="number" id="p-team" placeholder="e.g. 5" min="1" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="p-desc" rows="3" placeholder="Brief description of your startup, problem you solve, and technology..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Keywords (comma-separated)</label>
+          <input type="text" id="p-keywords" placeholder="e.g. AI, healthcare, NLP, B2B" />
+        </div>
+        <div class="form-group" style="display:flex;align-items:center;gap:0.5rem;">
+          <input type="checkbox" id="p-dpiit" style="width:auto;" />
+          <label for="p-dpiit" style="margin:0;">DPIIT Recognized</label>
+        </div>
+        <button class="btn btn-primary" onclick="createProfile()">💾 Save Profile</button>
+        <span id="profile-status" style="margin-left:1rem;font-size:0.85rem;color:var(--green);"></span>
+      </div>
+    </div>
+
+    <!-- ── MY APPLICATIONS ────────────────────────────────────────────────── -->
+    <div id="page-applications" class="page">
+      <div class="page-header">
+        <h1>My Applications</h1>
+        <p>Track your saved proposal drafts and applications</p>
+      </div>
+      <div class="filter-bar">
+        <select id="app-startup-filter" onchange="loadApplications()">
+          <option value="">— Select startup —</option>
+        </select>
+      </div>
+      <div id="applications-list" class="card-grid"></div>
+    </div>
+
+    <!-- ── API DOCS ───────────────────────────────────────────────────────── -->
+    <div id="page-api" class="page">
+      <div class="page-header">
+        <h1>API Documentation</h1>
+        <p>Interactive REST API powered by FastAPI + IBM Granite</p>
+      </div>
+      <div class="card">
+        <p style="margin-bottom:1rem;font-size:0.9rem;color:var(--muted);">
+          The backend exposes a full REST API. Open the interactive Swagger UI to explore and test all endpoints.
+        </p>
+        <div style="display:flex;gap:0.75rem;">
+          <a href="/api/docs" target="_blank" class="btn btn-primary">📖 Swagger UI</a>
+          <a href="/api/redoc" target="_blank" class="btn btn-secondary">📄 ReDoc</a>
+        </div>
+        <hr class="divider" />
+        <h3 style="font-size:0.95rem;margin-bottom:0.75rem;">Key Endpoints</h3>
+        <table style="width:100%;border-collapse:collapse;font-size:0.83rem;">
+          <thead>
+            <tr style="background:#f4f4f4;">
+              <th style="text-align:left;padding:0.5rem;border:1px solid var(--border);">Method</th>
+              <th style="text-align:left;padding:0.5rem;border:1px solid var(--border);">Endpoint</th>
+              <th style="text-align:left;padding:0.5rem;border:1px solid var(--border);">Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td style="padding:0.45rem 0.5rem;border:1px solid var(--border);"><span class="tag tag-green">POST</span></td><td style="padding:0.45rem 0.5rem;border:1px solid var(--border);font-family:monospace;">/api/v1/startups/</td><td style="padding:0.45rem 0.5rem;border:1px solid var(--border);">Register startup profile</td></tr>
+            <tr><td style="padding:0.45rem 0.5rem;border:1px solid var(--border);"><span class="tag tag-blue">GET</span></td><td style="padding:0.45rem 0.5rem;border:1px solid var(--border);font-family:monospace;">/api/v1/grants/</td><td style="padding:0.45rem 0.5rem;border:1px solid var(--border);">List all active grants</td></tr>
+            <tr><td style="padding:0.45rem 0.5rem;border:1px solid var(--border);"><span class="tag tag-green">POST</span></td><td style="padding:0.45rem 0.5rem;border:1px solid var(--border);font-family:monospace;">/api/v1/grants/search</td><td style="padding:0.45rem 0.5rem;border:1px solid var(--border);">AI-powered grant search</td></tr>
+            <tr><td style="padding:0.45rem 0.5rem;border:1px solid var(--border);"><span class="tag tag-blue">GET</span></td><td style="padding:0.45rem 0.5rem;border:1px solid var(--border);font-family:monospace;">/api/v1/grants/match/{startup_id}</td><td style="padding:0.45rem 0.5rem;border:1px solid var(--border);">Personalized AI matching via Granite</td></tr>
+            <tr><td style="padding:0.45rem 0.5rem;border:1px solid var(--border);"><span class="tag tag-green">POST</span></td><td style="padding:0.45rem 0.5rem;border:1px solid var(--border);font-family:monospace;">/api/v1/proposals/generate</td><td style="padding:0.45rem 0.5rem;border:1px solid var(--border);">Generate proposal with IBM Granite</td></tr>
+            <tr><td style="padding:0.45rem 0.5rem;border:1px solid var(--border);"><span class="tag tag-blue">GET</span></td><td style="padding:0.45rem 0.5rem;border:1px solid var(--border);font-family:monospace;">/api/health</td><td style="padding:0.45rem 0.5rem;border:1px solid var(--border);">Health check</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+const API = '';  // Same origin; set to http://localhost:8000 for dev
+let allGrants = [];
+let startups = [];
+let currentStartupId = null;
+
+// ── Seed grants for offline/demo mode ─────────────────────────────────────────
+const SEED_GRANTS = [
+  { id: 'g1', title: 'AICTE Idea Lab – Startup Grant 2025', provider: 'AICTE', funding_amount_min: 500000, funding_amount_max: 2500000, funding_currency: 'INR', status: 'open', domains: ['EdTech','HealthTech','AI/ML','Robotics'], stages: ['idea','prototype','mvp'], locations: ['India'], deadline: new Date(Date.now()+45*86400000).toISOString(), requirements: ['DPIIT certificate','AICTE affiliation letter','Business plan'], tags: ['AICTE','student startup','DPIIT'] },
+  { id: 'g2', title: 'Startup India Seed Fund Scheme (SISFS)', provider: 'DPIIT – Startup India', funding_amount_min: 2000000, funding_amount_max: 5000000, funding_currency: 'INR', status: 'open', domains: ['All domains'], stages: ['idea','prototype','mvp'], locations: ['India'], deadline: new Date(Date.now()+90*86400000).toISOString(), requirements: ['DPIIT recognition','Incubator association','Financial projections'], tags: ['seed fund','DPIIT','government'] },
+  { id: 'g3', title: 'DST NIDHI Prayas Grant', provider: 'Dept. of Science & Technology', funding_amount_min: 1000000, funding_amount_max: 1500000, funding_currency: 'INR', status: 'open', domains: ['DeepTech','Biotech','CleanTech','AI/ML'], stages: ['idea','prototype'], locations: ['India'], deadline: new Date(Date.now()+60*86400000).toISOString(), requirements: ['Technical feasibility report','Identity proof'], tags: ['DST','deep tech','NIDHI'] },
+  { id: 'g4', title: 'MeitY TIDE 2.0', provider: 'MeitY', funding_amount_min: 1500000, funding_amount_max: 7500000, funding_currency: 'INR', status: 'open', domains: ['AI/ML','IoT','Cybersecurity','Blockchain','EdTech'], stages: ['prototype','mvp','early_stage'], locations: ['India'], deadline: new Date(Date.now()+30*86400000).toISOString(), requirements: ['DPIIT recognition','Product demo','Revenue proof'], tags: ['MeitY','ICT','technology'] },
+  { id: 'g5', title: 'Atal Innovation Mission (AIM)', provider: 'NITI Aayog', funding_amount_min: 1000000, funding_amount_max: 10000000, funding_currency: 'INR', status: 'open', domains: ['AgriTech','HealthTech','CleanTech'], stages: ['idea','prototype','mvp','early_stage'], locations: ['India'], deadline: new Date(Date.now()+75*86400000).toISOString(), requirements: ['AIC association','Problem statement'], tags: ['AIM','social impact'] },
+  { id: 'g6', title: 'BIRAC BIG – Biotech Ignition Grant', provider: 'BIRAC – Dept. of Biotechnology', funding_amount_min: 5000000, funding_amount_max: 5000000, funding_currency: 'INR', status: 'open', domains: ['Biotech','HealthTech','AgriTech'], stages: ['idea','prototype'], locations: ['India'], deadline: new Date(Date.now()+50*86400000).toISOString(), requirements: ['Biotech innovation concept','BIRAC incubator letter'], tags: ['BIRAC','biotech'] },
+  { id: 'g7', title: 'Karnataka Elevate 100', provider: 'Govt. of Karnataka – KSTDC', funding_amount_min: 2000000, funding_amount_max: 5000000, funding_currency: 'INR', status: 'open', domains: ['All domains'], stages: ['mvp','early_stage','growth'], locations: ['Karnataka'], deadline: new Date(Date.now()+20*86400000).toISOString(), requirements: ['Karnataka registration','Pitch deck'], tags: ['Karnataka','state grant'] },
+  { id: 'g8', title: 'NSF SBIR Phase I Grant', provider: 'NSF – USA', funding_amount_min: 275000, funding_amount_max: 275000, funding_currency: 'USD', status: 'open', domains: ['DeepTech','AI/ML','Biotech','CleanTech'], stages: ['idea','prototype','mvp'], locations: ['USA'], deadline: new Date(Date.now()+120*86400000).toISOString(), requirements: ['US incorporation','Technical narrative'], tags: ['NSF','SBIR','USA'] },
+];
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  if (el) el.classList.add('active');
+  if (id === 'grants') loadGrants();
+  if (id === 'match') populateStartupDropdowns();
+  if (id === 'proposal') { populateStartupDropdowns(); populateGrantDropdown(); }
+  if (id === 'applications') { populateStartupDropdowns(true); }
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg, dur = 3000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+// ── Format currency ───────────────────────────────────────────────────────────
+function fmtFunding(min, max, cur) {
+  const sym = cur === 'USD' ? '$' : '₹';
+  const fmt = n => n >= 10000000 ? (n/10000000).toFixed(1)+'Cr' : n >= 100000 ? (n/100000).toFixed(0)+'L' : n >= 1000 ? (n/1000).toFixed(0)+'K' : n;
+  if (min && max) return `${sym}${fmt(min)} – ${sym}${fmt(max)}`;
+  if (max) return `Up to ${sym}${fmt(max)}`;
+  if (min) return `From ${sym}${fmt(min)}`;
+  return 'N/A';
+}
+
+// ── Load grants ───────────────────────────────────────────────────────────────
+async function loadGrants() {
+  try {
+    const res = await fetch(`${API}/api/v1/grants/?limit=50`);
+    if (res.ok) { allGrants = await res.json(); }
+    else { allGrants = SEED_GRANTS; }
+  } catch { allGrants = SEED_GRANTS; }
+  renderGrants(allGrants);
+}
+
+function renderGrants(grants) {
+  const el = document.getElementById('grants-list');
+  if (!grants.length) { el.innerHTML = '<p style="color:var(--muted)">No grants found.</p>'; return; }
+  el.innerHTML = grants.map(g => {
+    const dl = g.deadline ? new Date(g.deadline).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'}) : 'Rolling';
+    const daysLeft = g.deadline ? Math.ceil((new Date(g.deadline)-Date.now())/86400000) : null;
+    const dlTag = daysLeft !== null ? (daysLeft<=14 ? `<span class="tag tag-red">⚠ ${daysLeft}d left</span>` : `<span class="tag tag-teal">${daysLeft}d left</span>`) : '';
+    return `<div class="grant-card">
+      <div class="grant-title">${g.title}</div>
+      <div class="grant-provider">${g.provider}</div>
+      <div class="grant-meta">
+        ${(g.domains||[]).slice(0,2).map(d=>`<span class="tag tag-blue">${d}</span>`).join('')}
+        ${(g.stages||[]).slice(0,2).map(s=>`<span class="tag tag-purple">${s}</span>`).join('')}
+        ${(g.locations||[]).map(l=>`<span class="tag tag-teal">${l}</span>`).join('')}
+      </div>
+      <div class="grant-funding">💰 ${fmtFunding(g.funding_amount_min,g.funding_amount_max,g.funding_currency)}</div>
+      <div class="grant-deadline">🗓 Deadline: ${dl} ${dlTag}</div>
+      <div class="grant-actions">
+        <button class="btn btn-secondary btn-sm" onclick="viewGrantDetails('${g.id}')">Details</button>
+        <button class="btn btn-primary btn-sm" onclick="quickProposal('${g.id}')">Generate Proposal</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterGrants() {
+  const q = document.getElementById('grant-search').value.toLowerCase();
+  const dom = document.getElementById('filter-domain').value.toLowerCase();
+  const stage = document.getElementById('filter-stage').value;
+  const loc = document.getElementById('filter-location').value.toLowerCase();
+  const filtered = allGrants.filter(g => {
+    const text = `${g.title} ${g.provider} ${(g.domains||[]).join(' ')} ${(g.tags||[]).join(' ')}`.toLowerCase();
+    if (q && !text.includes(q)) return false;
+    if (dom && !(g.domains||[]).some(d => d.toLowerCase().includes(dom) || 'all domains'.includes(dom))) return false;
+    if (stage && !(g.stages||[]).includes(stage)) return false;
+    if (loc && !(g.locations||[]).some(l => l.toLowerCase().includes(loc))) return false;
+    return true;
+  });
+  renderGrants(filtered);
+}
+
+// ── AI Matching ───────────────────────────────────────────────────────────────
+function populateStartupDropdowns(forApplications = false) {
+  const ids = forApplications
+    ? ['app-startup-filter']
+    : ['match-startup-id', 'proposal-startup-id'];
+
+  ids.forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const current = sel.value;
+    sel.innerHTML = `<option value="">— Select startup —</option>`;
+    startups.forEach(s => {
+      sel.innerHTML += `<option value="${s.id}" ${s.id === current ? 'selected' : ''}>${s.name} (${s.stage})</option>`;
+    });
+  });
+}
+
+function populateGrantDropdown() {
+  const sel = document.getElementById('proposal-grant-id');
+  const grants = allGrants.length ? allGrants : SEED_GRANTS;
+  sel.innerHTML = `<option value="">— Select grant —</option>`;
+  grants.forEach(g => {
+    sel.innerHTML += `<option value="${g.id}">${g.title}</option>`;
+  });
+}
+
+async function runMatching() {
+  const startupId = document.getElementById('match-startup-id').value;
+  const topK = document.getElementById('match-top-k').value;
+  if (!startupId) { toast('⚠ Please select a startup profile first'); return; }
+
+  document.getElementById('match-spinner').style.display = 'inline-flex';
+  document.getElementById('match-results').innerHTML = '';
+
+  try {
+    const res = await fetch(`${API}/api/v1/grants/match/${startupId}?top_k=${topK}`);
+    if (res.ok) {
+      const data = await res.json();
+      renderMatchResults(data.results, data.query_time_ms);
+    } else {
+      renderOfflineMatchResults();
+    }
+  } catch {
+    renderOfflineMatchResults();
+  }
+  document.getElementById('match-spinner').style.display = 'none';
+}
+
+function renderMatchResults(results, queryTimeMs) {
+  const el = document.getElementById('match-results');
+  document.getElementById('stat-matched').textContent = results.length;
+  if (!results.length) { el.innerHTML = '<div class="card"><p style="color:var(--muted)">No matches found for this startup profile.</p></div>'; return; }
+  el.innerHTML = `<p style="color:var(--muted);font-size:0.8rem;margin-bottom:1rem;">Found ${results.length} matches in ${queryTimeMs}ms</p>` +
+    results.map((r, i) => {
+      const g = r.grant;
+      const sc = r.match_score;
+      const barColor = sc >= 70 ? 'var(--green)' : sc >= 40 ? 'var(--orange)' : 'var(--red)';
+      return `<div class="grant-card" style="margin-bottom:0.75rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div class="grant-title">#${i+1} ${g.title}</div>
+          <span class="tag tag-${sc>=70?'green':sc>=40?'orange':'red'}">${sc}%</span>
+        </div>
+        <div class="grant-provider">${g.provider}</div>
+        <div class="match-bar-wrap">
+          <span style="font-size:0.78rem;color:var(--muted);">Match</span>
+          <div class="match-bar"><div class="match-bar-fill" style="width:${sc}%;background:${barColor}"></div></div>
+          <span class="match-score" style="color:${barColor}">${sc}%</span>
+        </div>
+        <p style="font-size:0.82rem;color:var(--muted);margin-top:0.25rem;">${r.match_explanation}</p>
+        ${r.strong_matches.length ? `<div style="font-size:0.8rem;color:var(--green);">✅ ${r.strong_matches.slice(0,2).join(' · ')}</div>` : ''}
+        ${r.missing_criteria.length ? `<div style="font-size:0.8rem;color:var(--red);">⚠ ${r.missing_criteria.slice(0,2).join(' · ')}</div>` : ''}
+        <div class="grant-funding">💰 ${fmtFunding(g.funding_amount_min,g.funding_amount_max,g.funding_currency)}</div>
+        <div class="grant-actions">
+          <button class="btn btn-primary btn-sm" onclick="quickProposal('${g.id}')">Generate Proposal</button>
+        </div>
+      </div>`;
+    }).join('');
+}
+
+function renderOfflineMatchResults() {
+  // Simulated matching for demo without backend
+  const mockResults = SEED_GRANTS.slice(0,5).map((g, i) => ({
+    grant: g,
+    match_score: [88, 75, 62, 54, 41][i],
+    match_explanation: ['Strong domain and stage alignment with DPIIT recognition boost.',
+      'Good fit for early-stage Indian startup.',
+      'Partial match – domain aligns but location may differ.',
+      'Moderate match – check eligibility requirements.',
+      'Lower match – review stage requirements.'][i],
+    strong_matches: ['Domain match', 'Stage eligible'],
+    missing_criteria: ['Verify location requirement'],
+  }));
+  renderMatchResults(mockResults, 42.0);
+}
+
+// ── Proposal generation ───────────────────────────────────────────────────────
+async function generateProposal() {
+  const startupId = document.getElementById('proposal-startup-id').value;
+  const grantId = document.getElementById('proposal-grant-id').value;
+  const context = document.getElementById('proposal-context').value;
+
+  if (!startupId || !grantId) { toast('⚠ Select both a startup and a grant'); return; }
+
+  document.getElementById('proposal-spinner').style.display = 'inline-flex';
+  document.getElementById('proposal-output').style.display = 'none';
+
+  try {
+    const res = await fetch(`${API}/api/v1/proposals/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ startup_id: startupId, grant_id: grantId, additional_context: context }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      document.getElementById('proposal-text').textContent = data.proposal_draft;
+      document.getElementById('stat-proposals').textContent =
+        (parseInt(document.getElementById('stat-proposals').textContent) || 0) + 1;
+      toast('✅ Proposal generated by IBM Granite!');
+    } else {
+      showDemoProposal(grantId);
+    }
+  } catch {
+    showDemoProposal(grantId);
+  }
+
+  document.getElementById('proposal-spinner').style.display = 'none';
+  document.getElementById('proposal-output').style.display = 'block';
+}
+
+function showDemoProposal(grantId) {
+  const grant = SEED_GRANTS.find(g => g.id === grantId) || SEED_GRANTS[0];
+  document.getElementById('proposal-text').textContent =
+    `[Demo Mode – IBM Granite not connected]\n\n` +
+    `Grant Application Proposal\n` +
+    `Grant: ${grant.title}\n` +
+    `Provider: ${grant.provider}\n` +
+    `Generated: ${new Date().toLocaleString()}\n\n` +
+    `1. EXECUTIVE SUMMARY\n` +
+    `Our startup is seeking funding from the ${grant.title} to accelerate the development and deployment of our innovative technology solution. This grant aligns perfectly with our mission and current growth stage.\n\n` +
+    `2. PROBLEM STATEMENT\n` +
+    `We address a critical market gap by providing AI-powered solutions that improve efficiency and accessibility for our target users.\n\n` +
+    `3. PROPOSED SOLUTION\n` +
+    `Our platform leverages IBM Cloud technologies and advanced AI/ML algorithms to deliver measurable impact...\n\n` +
+    `[Connect IBM watsonx.ai API to generate a complete, tailored proposal]`;
+  toast('⚠ Demo mode – connect IBM Granite API for full proposal generation');
+}
+
+function copyProposal() {
+  const text = document.getElementById('proposal-text').textContent;
+  navigator.clipboard.writeText(text).then(() => toast('✅ Copied to clipboard!'));
+}
+
+// ── Startup Profile CRUD ──────────────────────────────────────────────────────
+async function createProfile() {
+  const name = document.getElementById('p-name').value.trim();
+  const domain = document.getElementById('p-domain').value;
+  const stage = document.getElementById('p-stage').value;
+  if (!name || !domain) { toast('⚠ Name and domain are required'); return; }
+
+  const payload = {
+    name, domain, stage,
+    location_state: document.getElementById('p-state').value.trim() || null,
+    founding_year: parseInt(document.getElementById('p-year').value) || null,
+    team_size: parseInt(document.getElementById('p-team').value) || null,
+    description: document.getElementById('p-desc').value.trim() || null,
+    keywords: document.getElementById('p-keywords').value.split(',').map(k => k.trim()).filter(Boolean),
+    dpiit_recognized: document.getElementById('p-dpiit').checked,
+    location_country: 'India',
+  };
+
+  try {
+    const res = await fetch(`${API}/api/v1/startups/`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      startups.push(data);
+      currentStartupId = data.id;
+      document.getElementById('profile-status').textContent = `✅ Profile saved! ID: ${data.id.slice(0,8)}...`;
+      toast(`✅ Startup profile "${name}" created!`);
+    } else {
+      // Offline fallback
+      const fake = { ...payload, id: 'local-' + Date.now() };
+      startups.push(fake);
+      currentStartupId = fake.id;
+      document.getElementById('profile-status').textContent = `✅ Saved locally (offline mode)`;
+      toast(`✅ Profile saved in demo mode`);
+    }
+  } catch {
+    const fake = { ...payload, id: 'local-' + Date.now() };
+    startups.push(fake);
+    document.getElementById('profile-status').textContent = '✅ Saved in demo mode';
+    toast('⚠ Backend not connected – saved in demo mode');
+  }
+}
+
+async function loadApplications() {
+  const startupId = document.getElementById('app-startup-filter').value;
+  if (!startupId) return;
+  const el = document.getElementById('applications-list');
+  try {
+    const res = await fetch(`${API}/api/v1/proposals/startup/${startupId}`);
+    const apps = res.ok ? await res.json() : [];
+    if (!apps.length) { el.innerHTML = '<div class="card"><p style="color:var(--muted)">No proposals yet for this startup.</p></div>'; return; }
+    el.innerHTML = apps.map(a => `<div class="grant-card">
+      <div class="grant-title">${a.grant_title}</div>
+      <div class="grant-provider">${a.provider}</div>
+      <div class="match-bar-wrap">
+        <span style="font-size:0.78rem;color:var(--muted);">Match</span>
+        <div class="match-bar"><div class="match-bar-fill" style="width:${a.match_score}%"></div></div>
+        <span class="match-score">${a.match_score}%</span>
+      </div>
+      <div style="font-size:0.8rem;margin-top:0.25rem;"><span class="tag tag-${a.status==='draft'?'orange':'green'}">${a.status}</span> · ${new Date(a.created_at).toLocaleDateString()}</div>
+    </div>`).join('');
+  } catch { el.innerHTML = '<div class="card"><p style="color:var(--muted)">No data available.</p></div>'; }
+}
+
+function viewGrantDetails(grantId) {
+  const g = allGrants.find(x => x.id === grantId) || SEED_GRANTS.find(x => x.id === grantId);
+  if (!g) return;
+  toast(`📄 ${g.title} – ${g.provider}`);
+}
+
+function quickProposal(grantId) {
+  showPage('proposal', document.querySelectorAll('.nav-item')[3]);
+  document.getElementById('proposal-grant-id').value = grantId;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  allGrants = SEED_GRANTS;
+  loadGrants();
+  // Try to fetch live startups
+  fetch(`${API}/api/v1/startups/?limit=50`)
+    .then(r => r.ok ? r.json() : [])
+    .then(data => { startups = data; })
+    .catch(() => {});
+});
+</script>
+</body>
+</html>
