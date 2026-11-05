@@ -27,8 +27,8 @@ frontend/dist/
 Thumbs.db
 
 # PowerPoint / Office files (submit separately, not via Git)
-*.pptx
-*.ppt
+
+
 *.docx
 *.xlsx
 
