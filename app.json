@@ -1,0 +1,79 @@
+{
+  "name": "AI Grant & Funding Finder for Startups",
+  "description": "An AI-powered platform that discovers, matches, and auto-drafts grant applications for Indian and global startups using IBM Granite (watsonx.ai).",
+  "keywords": [
+    "ai",
+    "startups",
+    "grants",
+    "ibm-granite",
+    "watsonx",
+    "fastapi",
+    "streamlit",
+    "india",
+    "aicte"
+  ],
+  "website": "https://github.com/your-username/AI-Grant-And-Funding-Finder-For-Startups",
+  "repository": "https://github.com/your-username/AI-Grant-And-Funding-Finder-For-Startups",
+  "logo": "https://raw.githubusercontent.com/your-username/AI-Grant-And-Funding-Finder-For-Startups/main/screenshots/dashboard.png",
+  "success_url": "/api/health",
+  "scripts": {
+    "postdeploy": "cd backend && python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+  },
+  "env": {
+    "IBM_WATSONX_API_KEY": {
+      "description": "IBM Cloud API key with watsonx.ai access",
+      "required": true
+    },
+    "IBM_WATSONX_PROJECT_ID": {
+      "description": "Your watsonx.ai project ID",
+      "required": true
+    },
+    "IBM_WATSONX_URL": {
+      "description": "IBM watsonx.ai regional endpoint",
+      "value": "https://us-south.ml.cloud.ibm.com",
+      "required": false
+    },
+    "IBM_GRANITE_MODEL_ID": {
+      "description": "IBM Granite model identifier",
+      "value": "ibm/granite-13b-chat-v2",
+      "required": false
+    },
+    "DATABASE_URL": {
+      "description": "SQLAlchemy database connection string",
+      "value": "sqlite:///./grant_finder.db",
+      "required": false
+    },
+    "REDIS_URL": {
+      "description": "Redis connection URL for caching",
+      "value": "redis://localhost:6379/0",
+      "required": false
+    },
+    "APP_ENV": {
+      "description": "Runtime environment",
+      "value": "production",
+      "required": false
+    },
+    "SECRET_KEY": {
+      "description": "Secret key for session signing",
+      "generator": "secret",
+      "required": true
+    },
+    "ALLOWED_ORIGINS": {
+      "description": "Comma-separated list of allowed CORS origins",
+      "value": "http://localhost:3000",
+      "required": false
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ],
+  "stack": "heroku-24"
+}

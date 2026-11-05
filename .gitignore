@@ -31,3 +31,8 @@ Thumbs.db
 *.ppt
 *.docx
 *.xlsx
+
+# Environment variables (secrets — never commit)
+.env
+.env.*
+!.env.example

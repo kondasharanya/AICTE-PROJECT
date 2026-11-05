@@ -1,0 +1,535 @@
+{
+  "id": "aicte-grant-finder-workflow",
+  "name": "AICTE AI Grant & Funding Finder",
+  "description": "Langflow workflow: Startup profile input → Rule-based filter → IBM Granite AI scoring → Ranked grant matches → Proposal generation",
+  "version": "1.0.0",
+  "data": {
+    "nodes": [
+      {
+        "id": "startup_input",
+        "type": "TextInputNode",
+        "position": { "x": 50, "y": 200 },
+        "data": {
+          "node": {
+            "display_name": "Startup Profile Input",
+            "description": "Enter your startup details as JSON or plain text",
+            "base_classes": ["Text"],
+            "template": {
+              "input_value": {
+                "type": "str",
+                "display_name": "Startup Profile (JSON)",
+                "value": "{\n  \"name\": \"TechBridge AI\",\n  \"domain\": \"EdTech\",\n  \"stage\": \"mvp\",\n  \"location_state\": \"Karnataka\",\n  \"location_country\": \"India\",\n  \"dpiit_recognized\": true,\n  \"keywords\": [\"AI\", \"education\", \"NLP\", \"B2B\"],\n  \"description\": \"AI-powered adaptive learning platform for K-12 students\",\n  \"founding_year\": 2022,\n  \"team_size\": 8\n}",
+                "required": true
+              }
+            },
+            "outputs": [
+              { "name": "text", "display_name": "Startup Profile", "types": ["Text"] }
+            ]
+          }
+        }
+      },
+      {
+        "id": "grant_database",
+        "type": "TextInputNode",
+        "position": { "x": 50, "y": 450 },
+        "data": {
+          "node": {
+            "display_name": "Grant Database",
+            "description": "Available grants from the AICTE/DPIIT/DST database",
+            "base_classes": ["Text"],
+            "template": {
+              "input_value": {
+                "type": "str",
+                "display_name": "Grants List (JSON)",
+                "value": "[\n  {\"id\": \"birac-bigi\", \"title\": \"BIRAC BIGI Grant\", \"provider\": \"BIRAC\", \"domains\": [\"Biotech\", \"HealthTech\"], \"stages\": [\"prototype\", \"mvp\"], \"locations\": [\"India\"], \"funding_max\": 5000000, \"deadline\": \"2025-06-30\", \"requirements\": [\"DPIIT registered\"]},\n  {\"id\": \"dst-nidhi\", \"title\": \"DST NIDHI PRAYAS\", \"provider\": \"DST\", \"domains\": [\"All domains\"], \"stages\": [\"idea\", \"prototype\"], \"locations\": [\"India\"], \"funding_max\": 1000000, \"deadline\": \"2025-05-31\", \"requirements\": []},\n  {\"id\": \"meity-tide\", \"title\": \"MeitY TIDE 2.0\", \"provider\": \"MeitY\", \"domains\": [\"AI/ML\", \"IoT\", \"EdTech\"], \"stages\": [\"mvp\", \"early_stage\"], \"locations\": [\"India\"], \"funding_max\": 3000000, \"deadline\": \"2025-07-15\", \"requirements\": [\"DPIIT registered\"]},\n  {\"id\": \"atal-bridge\", \"title\": \"Atal Innovation Bridge\", \"provider\": \"AIM NITI Aayog\", \"domains\": [\"All domains\"], \"stages\": [\"idea\", \"prototype\", \"mvp\"], \"locations\": [\"India\"], \"funding_max\": 2000000, \"deadline\": \"2025-08-31\", \"requirements\": []}\n]",
+                "required": true
+              }
+            },
+            "outputs": [
+              { "name": "text", "display_name": "Grants JSON", "types": ["Text"] }
+            ]
+          }
+        }
+      },
+      {
+        "id": "rule_filter_prompt",
+        "type": "PromptNode",
+        "position": { "x": 380, "y": 300 },
+        "data": {
+          "node": {
+            "display_name": "Rule-Based Filter Prompt",
+            "description": "Builds a prompt to filter grants by domain, stage, location",
+            "base_classes": ["Prompt"],
+            "template": {
+              "template": {
+                "type": "str",
+                "display_name": "Prompt Template",
+                "value": "You are a grant eligibility filter. Given the startup profile and grants list, filter and score each grant using these rules:\n\n**Scoring Rules (0-100):**\n- Domain match: +30 points\n- Stage match: +25 points\n- Location match: +20 points\n- DPIIT recognized: +10 points (if grant requires it)\n- Keyword overlap: +3 points per matching keyword (max 15)\n\n**Startup Profile:**\n{startup_profile}\n\n**Available Grants:**\n{grants_list}\n\nReturn a JSON array of objects:\n[\n  {{\n    \"grant_id\": \"<id>\",\n    \"grant_title\": \"<title>\",\n    \"rule_score\": <0-100>,\n    \"domain_match\": <true/false>,\n    \"stage_match\": <true/false>,\n    \"location_match\": <true/false>,\n    \"dpiit_bonus\": <true/false>,\n    \"keyword_overlap\": [\"<kw1>\", \"<kw2>\"],\n    \"strong_matches\": [\"<reason1>\"],\n    \"missing_criteria\": [\"<gap1>\"]\n  }}\n]\n\nReturn ONLY valid JSON array, no explanation."
+              },
+              "startup_profile": {
+                "type": "str",
+                "display_name": "Startup Profile",
+                "value": ""
+              },
+              "grants_list": {
+                "type": "str",
+                "display_name": "Grants List",
+                "value": ""
+              }
+            },
+            "outputs": [
+              { "name": "prompt", "display_name": "Filter Prompt", "types": ["Prompt"] }
+            ]
+          }
+        }
+      },
+      {
+        "id": "ibm_granite_filter",
+        "type": "WatsonxLLM",
+        "position": { "x": 700, "y": 200 },
+        "data": {
+          "node": {
+            "display_name": "IBM Granite – Rule Scoring",
+            "description": "IBM watsonx.ai Granite model for rule-based pre-filtering",
+            "base_classes": ["LanguageModel"],
+            "template": {
+              "model_id": {
+                "type": "str",
+                "display_name": "Model ID",
+                "value": "ibm/granite-13b-chat-v2"
+              },
+              "project_id": {
+                "type": "str",
+                "display_name": "watsonx Project ID",
+                "value": "",
+                "password": true
+              },
+              "api_key": {
+                "type": "str",
+                "display_name": "IBM Cloud API Key",
+                "value": "",
+                "password": true
+              },
+              "url": {
+                "type": "str",
+                "display_name": "watsonx URL",
+                "value": "https://us-south.ml.cloud.ibm.com"
+              },
+              "max_new_tokens": {
+                "type": "int",
+                "display_name": "Max New Tokens",
+                "value": 800
+              },
+              "temperature": {
+                "type": "float",
+                "display_name": "Temperature",
+                "value": 0.1
+              },
+              "decoding_method": {
+                "type": "str",
+                "display_name": "Decoding Method",
+                "value": "greedy"
+              },
+              "repetition_penalty": {
+                "type": "float",
+                "display_name": "Repetition Penalty",
+                "value": 1.1
+              }
+            },
+            "outputs": [
+              { "name": "text", "display_name": "Rule-Scored Grants JSON", "types": ["Text"] }
+            ]
+          }
+        }
+      },
+      {
+        "id": "ai_scoring_prompt",
+        "type": "PromptNode",
+        "position": { "x": 700, "y": 450 },
+        "data": {
+          "node": {
+            "display_name": "AI Scoring Prompt",
+            "description": "Deep AI match scoring prompt for top rule-based candidates (score ≥ 30)",
+            "base_classes": ["Prompt"],
+            "template": {
+              "template": {
+                "type": "str",
+                "display_name": "Prompt Template",
+                "value": "You are a grant matching expert. Evaluate how well this startup matches each filtered grant.\n\n**Startup Profile:**\n{startup_profile}\n\n**Pre-filtered Grants (rule score ≥ 30):**\n{filtered_grants}\n\nFor each grant provide a deep AI match score from 0 to 100 by evaluating:\n- Problem-solution fit with grant objectives\n- Technology alignment and innovation level\n- Market impact potential\n- Team capability indicators\n- Funding utilization likelihood\n\nBlend: Final Score = (rule_score × 0.4) + (ai_score × 0.6)\n\nReturn a JSON array sorted by final_score descending:\n[\n  {{\n    \"grant_id\": \"<id>\",\n    \"grant_title\": \"<title>\",\n    \"rule_score\": <0-100>,\n    \"ai_score\": <0-100>,\n    \"final_score\": <0-100>,\n    \"explanation\": \"<2-3 sentence reasoning>\",\n    \"strong_matches\": [\"<strength1>\", \"<strength2>\"],\n    \"missing_criteria\": [\"<gap1>\", \"<gap2>\"]\n  }}\n]\n\nReturn ONLY valid JSON array, ranked best match first."
+              },
+              "startup_profile": {
+                "type": "str",
+                "display_name": "Startup Profile",
+                "value": ""
+              },
+              "filtered_grants": {
+                "type": "str",
+                "display_name": "Pre-filtered Grants",
+                "value": ""
+              }
+            },
+            "outputs": [
+              { "name": "prompt", "display_name": "AI Scoring Prompt", "types": ["Prompt"] }
+            ]
+          }
+        }
+      },
+      {
+        "id": "ibm_granite_scoring",
+        "type": "WatsonxLLM",
+        "position": { "x": 1000, "y": 350 },
+        "data": {
+          "node": {
+            "display_name": "IBM Granite – AI Match Scoring",
+            "description": "IBM Granite deep semantic scoring (60% weight in final score)",
+            "base_classes": ["LanguageModel"],
+            "template": {
+              "model_id": {
+                "type": "str",
+                "display_name": "Model ID",
+                "value": "ibm/granite-13b-chat-v2"
+              },
+              "project_id": {
+                "type": "str",
+                "display_name": "watsonx Project ID",
+                "value": "",
+                "password": true
+              },
+              "api_key": {
+                "type": "str",
+                "display_name": "IBM Cloud API Key",
+                "value": "",
+                "password": true
+              },
+              "url": {
+                "type": "str",
+                "display_name": "watsonx URL",
+                "value": "https://us-south.ml.cloud.ibm.com"
+              },
+              "max_new_tokens": {
+                "type": "int",
+                "display_name": "Max New Tokens",
+                "value": 1000
+              },
+              "temperature": {
+                "type": "float",
+                "display_name": "Temperature",
+                "value": 0.2
+              },
+              "decoding_method": {
+                "type": "str",
+                "display_name": "Decoding Method",
+                "value": "greedy"
+              },
+              "repetition_penalty": {
+                "type": "float",
+                "display_name": "Repetition Penalty",
+                "value": 1.1
+              }
+            },
+            "outputs": [
+              { "name": "text", "display_name": "AI-Scored Ranked Results", "types": ["Text"] }
+            ]
+          }
+        }
+      },
+      {
+        "id": "proposal_prompt",
+        "type": "PromptNode",
+        "position": { "x": 1000, "y": 600 },
+        "data": {
+          "node": {
+            "display_name": "Proposal Generation Prompt",
+            "description": "Generates a structured grant application proposal for the top-matched grant",
+            "base_classes": ["Prompt"],
+            "template": {
+              "template": {
+                "type": "str",
+                "display_name": "Prompt Template",
+                "value": "You are an expert grant writer helping a startup apply for funding.\nWrite a professional grant application proposal draft.\n\nStartup Profile:\n- Name: {startup_name}\n- Domain: {startup_domain}\n- Stage: {startup_stage}\n- Description: {startup_description}\n- Location: {startup_location}\n- DPIIT Recognized: {dpiit_recognized}\n- Keywords: {startup_keywords}\n\nGrant Details:\n- Title: {grant_title}\n- Provider: {grant_provider}\n- Description: {grant_description}\n- Requirements: {grant_requirements}\n- Funding Range: {funding_range}\n\nAdditional Context:\n{additional_context}\n\nWrite a structured proposal with the following sections:\n1. Executive Summary\n2. Problem Statement\n3. Proposed Solution\n4. Innovation & Technology\n5. Market Opportunity\n6. Team & Capacity\n7. Budget Justification\n8. Expected Impact\n9. Conclusion\n\nUse professional language. Keep the proposal factual and compelling."
+              },
+              "startup_name": { "type": "str", "display_name": "Startup Name", "value": "" },
+              "startup_domain": { "type": "str", "display_name": "Domain", "value": "" },
+              "startup_stage": { "type": "str", "display_name": "Stage", "value": "" },
+              "startup_description": { "type": "str", "display_name": "Description", "value": "" },
+              "startup_location": { "type": "str", "display_name": "Location", "value": "" },
+              "dpiit_recognized": { "type": "str", "display_name": "DPIIT", "value": "" },
+              "startup_keywords": { "type": "str", "display_name": "Keywords", "value": "" },
+              "grant_title": { "type": "str", "display_name": "Grant Title", "value": "" },
+              "grant_provider": { "type": "str", "display_name": "Provider", "value": "" },
+              "grant_description": { "type": "str", "display_name": "Grant Description", "value": "" },
+              "grant_requirements": { "type": "str", "display_name": "Requirements", "value": "" },
+              "funding_range": { "type": "str", "display_name": "Funding Range", "value": "" },
+              "additional_context": { "type": "str", "display_name": "Additional Context", "value": "" }
+            },
+            "outputs": [
+              { "name": "prompt", "display_name": "Proposal Prompt", "types": ["Prompt"] }
+            ]
+          }
+        }
+      },
+      {
+        "id": "ibm_granite_proposal",
+        "type": "WatsonxLLM",
+        "position": { "x": 1300, "y": 600 },
+        "data": {
+          "node": {
+            "display_name": "IBM Granite – Proposal Writer",
+            "description": "IBM Granite generates a full structured grant proposal (max 1500 tokens)",
+            "base_classes": ["LanguageModel"],
+            "template": {
+              "model_id": {
+                "type": "str",
+                "display_name": "Model ID",
+                "value": "ibm/granite-13b-chat-v2"
+              },
+              "project_id": {
+                "type": "str",
+                "display_name": "watsonx Project ID",
+                "value": "",
+                "password": true
+              },
+              "api_key": {
+                "type": "str",
+                "display_name": "IBM Cloud API Key",
+                "value": "",
+                "password": true
+              },
+              "url": {
+                "type": "str",
+                "display_name": "watsonx URL",
+                "value": "https://us-south.ml.cloud.ibm.com"
+              },
+              "max_new_tokens": {
+                "type": "int",
+                "display_name": "Max New Tokens",
+                "value": 1500
+              },
+              "temperature": {
+                "type": "float",
+                "display_name": "Temperature",
+                "value": 0.4
+              },
+              "decoding_method": {
+                "type": "str",
+                "display_name": "Decoding Method",
+                "value": "greedy"
+              },
+              "repetition_penalty": {
+                "type": "float",
+                "display_name": "Repetition Penalty",
+                "value": 1.1
+              }
+            },
+            "outputs": [
+              { "name": "text", "display_name": "Generated Proposal", "types": ["Text"] }
+            ]
+          }
+        }
+      },
+      {
+        "id": "output_ranked",
+        "type": "TextOutputNode",
+        "position": { "x": 1300, "y": 350 },
+        "data": {
+          "node": {
+            "display_name": "Ranked Grant Matches",
+            "description": "Final ranked list of grants with AI + rule-based scores",
+            "base_classes": ["Text"],
+            "template": {
+              "input_value": {
+                "type": "str",
+                "display_name": "Ranked Results",
+                "value": ""
+              }
+            },
+            "outputs": [
+              { "name": "text", "display_name": "Top Matched Grants", "types": ["Text"] }
+            ]
+          }
+        }
+      },
+      {
+        "id": "output_proposal",
+        "type": "TextOutputNode",
+        "position": { "x": 1600, "y": 600 },
+        "data": {
+          "node": {
+            "display_name": "Grant Proposal Draft",
+            "description": "Final generated grant application proposal",
+            "base_classes": ["Text"],
+            "template": {
+              "input_value": {
+                "type": "str",
+                "display_name": "Proposal Draft",
+                "value": ""
+              }
+            },
+            "outputs": [
+              { "name": "text", "display_name": "Proposal Document", "types": ["Text"] }
+            ]
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "startup_input",
+        "sourceHandle": "text",
+        "target": "rule_filter_prompt",
+        "targetHandle": "startup_profile",
+        "data": { "label": "Startup Profile JSON" }
+      },
+      {
+        "id": "e2",
+        "source": "grant_database",
+        "sourceHandle": "text",
+        "target": "rule_filter_prompt",
+        "targetHandle": "grants_list",
+        "data": { "label": "Grants Database JSON" }
+      },
+      {
+        "id": "e3",
+        "source": "rule_filter_prompt",
+        "sourceHandle": "prompt",
+        "target": "ibm_granite_filter",
+        "targetHandle": "input",
+        "data": { "label": "Rule Filter Prompt" }
+      },
+      {
+        "id": "e4",
+        "source": "startup_input",
+        "sourceHandle": "text",
+        "target": "ai_scoring_prompt",
+        "targetHandle": "startup_profile",
+        "data": { "label": "Startup Profile" }
+      },
+      {
+        "id": "e5",
+        "source": "ibm_granite_filter",
+        "sourceHandle": "text",
+        "target": "ai_scoring_prompt",
+        "targetHandle": "filtered_grants",
+        "data": { "label": "Pre-filtered Grants (score ≥ 30)" }
+      },
+      {
+        "id": "e6",
+        "source": "ai_scoring_prompt",
+        "sourceHandle": "prompt",
+        "target": "ibm_granite_scoring",
+        "targetHandle": "input",
+        "data": { "label": "AI Scoring Prompt" }
+      },
+      {
+        "id": "e7",
+        "source": "ibm_granite_scoring",
+        "sourceHandle": "text",
+        "target": "output_ranked",
+        "targetHandle": "input_value",
+        "data": { "label": "Ranked Matches" }
+      },
+      {
+        "id": "e8",
+        "source": "ibm_granite_scoring",
+        "sourceHandle": "text",
+        "target": "proposal_prompt",
+        "targetHandle": "grant_title",
+        "data": { "label": "Top Match → Proposal" }
+      },
+      {
+        "id": "e9",
+        "source": "startup_input",
+        "sourceHandle": "text",
+        "target": "proposal_prompt",
+        "targetHandle": "startup_name",
+        "data": { "label": "Startup Details" }
+      },
+      {
+        "id": "e10",
+        "source": "proposal_prompt",
+        "sourceHandle": "prompt",
+        "target": "ibm_granite_proposal",
+        "targetHandle": "input",
+        "data": { "label": "Proposal Prompt" }
+      },
+      {
+        "id": "e11",
+        "source": "ibm_granite_proposal",
+        "sourceHandle": "text",
+        "target": "output_proposal",
+        "targetHandle": "input_value",
+        "data": { "label": "Generated Proposal" }
+      }
+    ]
+  },
+  "meta": {
+    "flow_stages": [
+      {
+        "step": 1,
+        "name": "Startup Profile Input",
+        "node_id": "startup_input",
+        "description": "User enters startup details: name, domain, stage, location, DPIIT status, keywords, description"
+      },
+      {
+        "step": 2,
+        "name": "Grant Database",
+        "node_id": "grant_database",
+        "description": "All available grants loaded (BIRAC, DST, MeitY, AIM, AICTE, etc.) with eligibility metadata"
+      },
+      {
+        "step": 3,
+        "name": "Rule-Based Filter",
+        "node_id": "rule_filter_prompt + ibm_granite_filter",
+        "description": "Domain (+30), Stage (+25), Location (+20), DPIIT (+10), Keywords (+15) → grants scored 0-100"
+      },
+      {
+        "step": 4,
+        "name": "IBM Granite AI Scoring",
+        "node_id": "ai_scoring_prompt + ibm_granite_scoring",
+        "description": "Semantic deep scoring for grants with rule_score ≥ 30. Final = 40% rule + 60% AI"
+      },
+      {
+        "step": 5,
+        "name": "Ranked Results Output",
+        "node_id": "output_ranked",
+        "description": "Sorted list of top K grants with scores, explanations, strengths, and gaps"
+      },
+      {
+        "step": 6,
+        "name": "Proposal Generation",
+        "node_id": "proposal_prompt + ibm_granite_proposal",
+        "description": "IBM Granite writes a 9-section structured grant proposal for the top-matched grant"
+      },
+      {
+        "step": 7,
+        "name": "Proposal Draft Output",
+        "node_id": "output_proposal",
+        "description": "Final professional grant application document ready for submission"
+      }
+    ],
+    "scoring_formula": "final_score = (rule_score × 0.4) + (ai_score × 0.6)",
+    "rule_scoring_breakdown": {
+      "domain_match": 30,
+      "stage_match": 25,
+      "location_match": 20,
+      "dpiit_bonus": 10,
+      "keyword_overlap": "3 per match, max 15"
+    },
+    "ibm_watsonx_config": {
+      "model": "ibm/granite-13b-chat-v2",
+      "url": "https://us-south.ml.cloud.ibm.com",
+      "generation_endpoint": "/ml/v1/text/generation?version=2023-05-29",
+      "iam_token_url": "https://iam.cloud.ibm.com/identity/token",
+      "filter_node": { "max_new_tokens": 800, "temperature": 0.1 },
+      "scoring_node": { "max_new_tokens": 1000, "temperature": 0.2 },
+      "proposal_node": { "max_new_tokens": 1500, "temperature": 0.4 }
+    },
+    "required_env_vars": [
+      "IBM_WATSONX_API_KEY",
+      "IBM_WATSONX_PROJECT_ID",
+      "IBM_WATSONX_URL",
+      "IBM_GRANITE_MODEL_ID"
+    ]
+  }
+}

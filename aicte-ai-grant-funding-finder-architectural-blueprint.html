@@ -1,0 +1,395 @@
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AICTE AI Grant Finder — Architecture</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    background: #ffffff;
+    color: #1f2328;
+    padding: 32px 24px 48px;
+  }
+  .page { max-width: 760px; margin: 0 auto; }
+
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { color: #57606a; font-size: 13px; margin-bottom: 32px; }
+  h2 { font-size: 14px; font-weight: 700; text-transform: uppercase;
+       letter-spacing: .06em; color: #57606a; margin: 32px 0 12px; }
+  h3 { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+
+  /* ── Layer cards ── */
+  .layer {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .layer-header {
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .layer-body { padding: 12px 14px 14px; background: #ffffff; }
+
+  .layer-ui    .layer-header { background: #eff6ff; color: #1d4ed8; }
+  .layer-api   .layer-header { background: #f0fdf4; color: #15803d; }
+  .layer-svc   .layer-header { background: #fefce8; color: #a16207; }
+  .layer-data  .layer-header { background: #fdf4ff; color: #7e22ce; }
+  .layer-ibm   .layer-header { background: #fff1f2; color: #be123c; }
+  .layer-infra .layer-header { background: #f0f9ff; color: #0369a1; }
+
+  /* ── Grid of boxes ── */
+  .box-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 8px;
+  }
+  .box {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 9px 11px;
+    background: #f7f8fa;
+  }
+  .box .name { font-size: 12px; font-weight: 600; margin-bottom: 3px; }
+  .box .desc { font-size: 11px; color: #57606a; }
+  .box.accent { border-color: #3b82d4; background: #eff6ff; }
+  .box.ibm    { border-color: #be123c; background: #fff1f2; }
+
+  /* ── Flow diagram ── */
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0;
+    margin: 8px 0;
+  }
+  .flow-step {
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 5px;
+    padding: 5px 10px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .flow-arrow {
+    font-size: 14px;
+    color: #57606a;
+    padding: 0 5px;
+    line-height: 1;
+  }
+
+  /* ── Data model ── */
+  .models { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .model-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    overflow: hidden;
+    font-size: 11px;
+  }
+  .model-title {
+    background: #f7f8fa;
+    padding: 5px 9px;
+    font-weight: 700;
+    font-size: 12px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .model-fields { padding: 7px 9px; }
+  .field { display: flex; justify-content: space-between; gap: 6px; padding: 1px 0; }
+  .field-name { color: #1f2328; }
+  .field-type { color: #7c5cd8; font-family: monospace; }
+  .pk  { color: #be123c; font-weight: 600; }
+  .fk  { color: #0369a1; }
+
+  /* ── Endpoints table ── */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; padding: 5px 8px; background: #f7f8fa;
+       border-bottom: 2px solid #e5e7eb; font-size: 11px;
+       text-transform: uppercase; letter-spacing: .05em; color: #57606a; }
+  td { padding: 5px 8px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .method { font-family: monospace; font-weight: 700; font-size: 11px; }
+  .get    { color: #15803d; }
+  .post   { color: #1d4ed8; }
+
+  /* ── Config table ── */
+  .cfg-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .cfg-table th { text-align: left; padding: 5px 8px; background: #f7f8fa;
+                  border-bottom: 2px solid #e5e7eb; font-size: 11px;
+                  text-transform: uppercase; letter-spacing: .05em; color: #57606a; }
+  .cfg-table td { padding: 5px 8px; border-bottom: 1px solid #e5e7eb; font-family: monospace; font-size: 11px; }
+  .cfg-table tr:last-child td { border-bottom: none; }
+
+  /* ── Score breakdown ── */
+  .score-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .score-label { font-size: 12px; min-width: 170px; }
+  .score-bar-bg { flex: 1; background: #e5e7eb; border-radius: 99px; height: 8px; }
+  .score-bar    { height: 8px; border-radius: 99px; background: #3b82d4; }
+  .score-pts { font-size: 11px; color: #57606a; min-width: 36px; text-align: right; }
+
+  /* ── Divider ── */
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 24px 0; }
+
+  /* ── Footer ── */
+  .footer { text-align: center; font-size: 11px; color: #57606a;
+            border-top: 1px solid #e5e7eb; margin-top: 40px; padding-top: 14px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>AICTE AI Grant &amp; Funding Finder</h1>
+  <p class="subtitle">Architectural Blueprint — v1.0.0  ·  FastAPI · IBM watsonx.ai (Granite) · SQLite · Redis · React</p>
+
+  
+  <h2>System Layers</h2>
+
+  
+  <div class="layer layer-ui">
+    <div class="layer-header">① Presentation Layer — React Frontend (port 3000)</div>
+    <div class="layer-body">
+      <div class="box-grid">
+        <div class="box"><div class="name">Pages</div><div class="desc">Home, Dashboard, Grant Detail, Proposal Builder</div></div>
+        <div class="box"><div class="name">Components</div><div class="desc">GrantCard, MatchScore, StartupForm, ProposalViewer</div></div>
+        <div class="box"><div class="name">Services</div><div class="desc">REST calls to /api/v1 via fetch/axios</div></div>
+        <div class="box"><div class="name">Static Serve</div><div class="desc">Production: FastAPI mounts /frontend/dist via StaticFiles</div></div>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="layer layer-api">
+    <div class="layer-header">② API Layer — FastAPI (port 8000)</div>
+    <div class="layer-body">
+      <div class="box-grid">
+        <div class="box accent"><div class="name">main.py</div><div class="desc">App factory, lifespan hooks, CORS middleware, router mount, /api/health</div></div>
+        <div class="box"><div class="name">routes/startups</div><div class="desc">CRUD for StartupProfile entities</div></div>
+        <div class="box"><div class="name">routes/grants</div><div class="desc">List, search, AI-match grants by startup</div></div>
+        <div class="box"><div class="name">routes/proposals</div><div class="desc">Generate &amp; retrieve Granite-written proposals</div></div>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="layer layer-svc">
+    <div class="layer-header">③ Service Layer — Business Logic</div>
+    <div class="layer-body">
+      <div class="box-grid">
+        <div class="box ibm"><div class="name">GraniteService</div><div class="desc">IBM watsonx.ai REST wrapper: IAM auth, text generation, eligibility extraction, match scoring, proposal drafting</div></div>
+        <div class="box"><div class="name">MatchingEngine</div><div class="desc">Hybrid scoring: rule-based (domain / stage / location / DPIIT / keywords) → Granite AI blend (40% rule + 60% AI)</div></div>
+        <div class="box"><div class="name">GrantService</div><div class="desc">CRUD, filtering, grant seeding on startup</div></div>
+        <div class="box"><div class="name">ScraperService</div><div class="desc">Crawls AICTE, DST, Startup India portals; polite delay &amp; retry</div></div>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="layer layer-data">
+    <div class="layer-header">④ Data Layer — SQLAlchemy ORM + SQLite</div>
+    <div class="layer-body">
+      <div class="box-grid">
+        <div class="box"><div class="name">database.py</div><div class="desc">SQLAlchemy engine, SessionLocal factory, Base declarative</div></div>
+        <div class="box"><div class="name">models.py</div><div class="desc">StartupProfile · Grant · GrantApplication</div></div>
+        <div class="box"><div class="name">schemas.py</div><div class="desc">Pydantic v2 request/response schemas for all routes</div></div>
+        <div class="box"><div class="name">grant_finder.db</div><div class="desc">SQLite file (swappable via DATABASE_URL env var)</div></div>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="layer layer-ibm">
+    <div class="layer-header">⑤ IBM Cloud Integrations</div>
+    <div class="layer-body">
+      <div class="box-grid">
+        <div class="box ibm"><div class="name">watsonx.ai</div><div class="desc">Granite-13b-chat-v2 · text generation, eligibility NLP, match scoring, proposal writing</div></div>
+        <div class="box ibm"><div class="name">IBM IAM</div><div class="desc">iam.cloud.ibm.com · API key → bearer token exchange for watsonx calls</div></div>
+        <div class="box ibm"><div class="name">Cloud Object Storage</div><div class="desc">s3.us-south · grant data snapshots, scraped artefacts</div></div>
+        <div class="box ibm"><div class="name">Watson Discovery</div><div class="desc">Optional semantic search layer over grant corpus</div></div>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="layer layer-infra">
+    <div class="layer-header">⑥ Infrastructure — Docker Compose</div>
+    <div class="layer-body">
+      <div class="box-grid">
+        <div class="box"><div class="name">grant-finder-api</div><div class="desc">Python 3.13 · Dockerfile in /backend · port 8000</div></div>
+        <div class="box"><div class="name">grant-finder-redis</div><div class="desc">redis:7-alpine · port 6379 · caching &amp; task queue</div></div>
+        <div class="box"><div class="name">grant_db volume</div><div class="desc">Persistent SQLite storage mounted at /app/data</div></div>
+        <div class="box"><div class="name">.env config</div><div class="desc">All secrets &amp; URLs injected at runtime via env_file</div></div>
+      </div>
+    </div>
+  </div>
+
+  <hr />
+
+  
+  <h2>Key Data Flows</h2>
+
+  <h3 style="margin-bottom:8px">Grant Match Request</h3>
+  <div class="flow">
+    <div class="flow-step">Browser</div><div class="flow-arrow">→</div>
+    <div class="flow-step">GET /api/v1/grants/match/{startup_id}</div><div class="flow-arrow">→</div>
+    <div class="flow-step">grants.py router</div><div class="flow-arrow">→</div>
+    <div class="flow-step">MatchingEngine.find_matches()</div><div class="flow-arrow">→</div>
+    <div class="flow-step">Rule-based score</div><div class="flow-arrow">→</div>
+    <div class="flow-step">GraniteService (if score ≥ 30)</div><div class="flow-arrow">→</div>
+    <div class="flow-step">Blend 40/60</div><div class="flow-arrow">→</div>
+    <div class="flow-step">GrantSearchResponse JSON</div>
+  </div>
+
+  <h3 style="margin-top:16px;margin-bottom:8px">Proposal Generation</h3>
+  <div class="flow">
+    <div class="flow-step">POST /api/v1/proposals/generate</div><div class="flow-arrow">→</div>
+    <div class="flow-step">proposals.py router</div><div class="flow-arrow">→</div>
+    <div class="flow-step">MatchingEngine.generate_proposal()</div><div class="flow-arrow">→</div>
+    <div class="flow-step">GraniteService.generate_proposal()</div><div class="flow-arrow">→</div>
+    <div class="flow-step">watsonx.ai REST (max 1500 tokens)</div><div class="flow-arrow">→</div>
+    <div class="flow-step">GrantApplication saved to DB</div><div class="flow-arrow">→</div>
+    <div class="flow-step">Draft returned</div>
+  </div>
+
+  <h3 style="margin-top:16px;margin-bottom:8px">App Startup Sequence</h3>
+  <div class="flow">
+    <div class="flow-step">uvicorn starts</div><div class="flow-arrow">→</div>
+    <div class="flow-step">lifespan() context</div><div class="flow-arrow">→</div>
+    <div class="flow-step">setup_logging()</div><div class="flow-arrow">→</div>
+    <div class="flow-step">Base.metadata.create_all()</div><div class="flow-arrow">→</div>
+    <div class="flow-step">grant_service.seed_grants()</div><div class="flow-arrow">→</div>
+    <div class="flow-step">App ready</div>
+  </div>
+
+  <hr />
+
+  
+  <h2>Data Model (SQLAlchemy ORM)</h2>
+  <div class="models">
+
+    <div class="model-card">
+      <div class="model-title">StartupProfile</div>
+      <div class="model-fields">
+        <div class="field"><span class="field-name pk">id</span><span class="field-type">UUID str</span></div>
+        <div class="field"><span class="field-name">name</span><span class="field-type">String(255)</span></div>
+        <div class="field"><span class="field-name">domain</span><span class="field-type">String(100)</span></div>
+        <div class="field"><span class="field-name">stage</span><span class="field-type">Enum</span></div>
+        <div class="field"><span class="field-name">location_country</span><span class="field-type">String</span></div>
+        <div class="field"><span class="field-name">location_state</span><span class="field-name"></span><span class="field-type">String</span></div>
+        <div class="field"><span class="field-name">team_size</span><span class="field-type">Integer</span></div>
+        <div class="field"><span class="field-name">annual_revenue</span><span class="field-type">Float INR</span></div>
+        <div class="field"><span class="field-name">keywords</span><span class="field-type">JSON[]</span></div>
+        <div class="field"><span class="field-name">dpiit_recognized</span><span class="field-type">Boolean</span></div>
+      </div>
+    </div>
+
+    <div class="model-card">
+      <div class="model-title">Grant</div>
+      <div class="model-fields">
+        <div class="field"><span class="field-name pk">id</span><span class="field-type">UUID str</span></div>
+        <div class="field"><span class="field-name">title</span><span class="field-type">String(500)</span></div>
+        <div class="field"><span class="field-name">provider</span><span class="field-type">String(255)</span></div>
+        <div class="field"><span class="field-name">status</span><span class="field-type">Enum</span></div>
+        <div class="field"><span class="field-name">funding_min/max</span><span class="field-type">Float</span></div>
+        <div class="field"><span class="field-name">deadline</span><span class="field-type">DateTime</span></div>
+        <div class="field"><span class="field-name">domains</span><span class="field-type">JSON[]</span></div>
+        <div class="field"><span class="field-name">stages</span><span class="field-type">JSON[]</span></div>
+        <div class="field"><span class="field-name">locations</span><span class="field-type">JSON[]</span></div>
+        <div class="field"><span class="field-name">eligibility_structured</span><span class="field-type">JSON{}</span></div>
+        <div class="field"><span class="field-name">tags / requirements</span><span class="field-type">JSON[]</span></div>
+      </div>
+    </div>
+
+    <div class="model-card">
+      <div class="model-title">GrantApplication</div>
+      <div class="model-fields">
+        <div class="field"><span class="field-name pk">id</span><span class="field-type">UUID str</span></div>
+        <div class="field"><span class="field-name fk">startup_id</span><span class="field-type">FK →</span></div>
+        <div class="field"><span class="field-name fk">grant_id</span><span class="field-type">FK →</span></div>
+        <div class="field"><span class="field-name">match_score</span><span class="field-type">Float 0–100</span></div>
+        <div class="field"><span class="field-name">match_explanation</span><span class="field-type">Text</span></div>
+        <div class="field"><span class="field-name">proposal_draft</span><span class="field-type">Text (AI)</span></div>
+        <div class="field"><span class="field-name">status</span><span class="field-type">draft/submitted…</span></div>
+        <div class="field"><span class="field-name">submitted_at</span><span class="field-type">DateTime</span></div>
+      </div>
+    </div>
+  </div>
+
+  <hr />
+
+  
+  <h2>Hybrid Match Scoring Breakdown</h2>
+  <p style="font-size:12px;color:#57606a;margin-bottom:12px">
+    Rule-based score (max 100) feeds the 40% component. IBM Granite AI score (0–100) feeds the 60% component. Final = (rule × 0.4) + (AI × 0.6). AI is only called when rule-based ≥ 30.
+  </p>
+
+  <div class="score-row"><span class="score-label">Domain match</span><div class="score-bar-bg"><div class="score-bar" style="width:30%"></div></div><span class="score-pts">30 pts</span></div>
+  <div class="score-row"><span class="score-label">Stage match</span><div class="score-bar-bg"><div class="score-bar" style="width:25%"></div></div><span class="score-pts">25 pts</span></div>
+  <div class="score-row"><span class="score-label">Location match</span><div class="score-bar-bg"><div class="score-bar" style="width:20%"></div></div><span class="score-pts">20 pts</span></div>
+  <div class="score-row"><span class="score-label">DPIIT recognition bonus</span><div class="score-bar-bg"><div class="score-bar" style="width:10%"></div></div><span class="score-pts">10 pts</span></div>
+  <div class="score-row"><span class="score-label">Keyword overlap (up to 3)</span><div class="score-bar-bg"><div class="score-bar" style="width:15%"></div></div><span class="score-pts">15 pts</span></div>
+
+  <hr />
+
+  
+  <h2>REST API Endpoints — /api/v1</h2>
+  <table>
+    <thead>
+      <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="method get">GET</span></td><td>/grants/</td><td>List grants with domain / stage / location / status filters</td></tr>
+      <tr><td><span class="method get">GET</span></td><td>/grants/{id}</td><td>Full grant detail</td></tr>
+      <tr><td><span class="method post">POST</span></td><td>/grants/search</td><td>AI-powered search; personalized scoring with startup_id</td></tr>
+      <tr><td><span class="method get">GET</span></td><td>/grants/match/{startup_id}</td><td>Top-k ranked matches for a startup via IBM Granite</td></tr>
+      <tr><td><span class="method post">POST</span></td><td>/startups/</td><td>Create startup profile</td></tr>
+      <tr><td><span class="method get">GET</span></td><td>/startups/{id}</td><td>Get startup profile</td></tr>
+      <tr><td><span class="method post">POST</span></td><td>/proposals/generate</td><td>Generate 9-section Granite proposal draft</td></tr>
+      <tr><td><span class="method get">GET</span></td><td>/proposals/{id}</td><td>Retrieve saved proposal / application</td></tr>
+      <tr><td><span class="method get">GET</span></td><td>/api/health</td><td>Liveness check + model/env info</td></tr>
+    </tbody>
+  </table>
+
+  <hr />
+
+  
+  <h2>Key Configuration (.env)</h2>
+  <table class="cfg-table">
+    <thead><tr><th>Variable</th><th>Default</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td>IBM_WATSONX_API_KEY</td><td>—</td><td>watsonx.ai authentication</td></tr>
+      <tr><td>IBM_WATSONX_PROJECT_ID</td><td>—</td><td>watsonx project scope</td></tr>
+      <tr><td>IBM_GRANITE_MODEL_ID</td><td>ibm/granite-13b-chat-v2</td><td>Granite model for all NLP tasks</td></tr>
+      <tr><td>IBM_WATSONX_URL</td><td>https://us-south.ml.cloud.ibm.com</td><td>Regional inference endpoint</td></tr>
+      <tr><td>DATABASE_URL</td><td>sqlite:///./grant_finder.db</td><td>Swap to PostgreSQL for production</td></tr>
+      <tr><td>REDIS_URL</td><td>redis://localhost:6379/0</td><td>Caching &amp; background tasks</td></tr>
+      <tr><td>ALLOWED_ORIGINS</td><td>http://localhost:3000</td><td>CORS allow-list (comma-separated)</td></tr>
+      <tr><td>APP_ENV</td><td>development</td><td>Controls debug &amp; log verbosity</td></tr>
+    </tbody>
+  </table>
+
+  <hr />
+
+  
+  <h2>IBM Granite NLP Task Inventory</h2>
+  <table>
+    <thead><tr><th>Task</th><th>Method</th><th>Tokens</th><th>Temp</th></tr></thead>
+    <tbody>
+      <tr><td>Eligibility extraction (JSON)</td><td>extract_eligibility()</td><td>400</td><td>0.1</td></tr>
+      <tr><td>Match score + explanation (JSON)</td><td>compute_match_score()</td><td>500</td><td>0.2</td></tr>
+      <tr><td>9-section proposal draft</td><td>generate_proposal()</td><td>1500</td><td>0.4</td></tr>
+    </tbody>
+  </table>
+
+  <div class="footer">Made with IBM Bob</div>
+</div>
+</body>
+</html>
