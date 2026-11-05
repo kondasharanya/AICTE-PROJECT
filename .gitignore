@@ -25,3 +25,9 @@ frontend/dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# PowerPoint / Office files (submit separately, not via Git)
+*.pptx
+*.ppt
+*.docx
+*.xlsx
